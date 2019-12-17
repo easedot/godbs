@@ -74,6 +74,125 @@ func (e *DbHelper) Find(m interface{}) (err error) {
 	return
 }
 
+func (e *DbHelper) SqlMap(query string)([]map[string]string, error){
+	rows, _ := e.conn.Query(query)
+	cols, _ := rows.Columns()
+	var result []map[string]string
+	for rows.Next() {
+		columns := make([]string, len(cols))
+		columnPointers := make([]interface{}, len(cols))
+		for i, _ := range columns {
+			columnPointers[i] = &columns[i]
+		}
+
+		rows.Scan(columnPointers...)
+		data := make(map[string]string)
+		for i, colName := range cols {
+			data[colName] = columns[i]
+		}
+		result = append(result, data)
+	}
+	return result,nil
+}
+func (e *DbHelper) SqlSlice(query string)([][]string, error){
+	rows, _ := e.conn.Query(query)
+	cols, _ := rows.Columns()
+	var result [][]string
+	for rows.Next() {
+		columns := make([]string, len(cols))
+		columnPointers := make([]interface{}, len(cols))
+		for i, _ := range columns {
+			columnPointers[i] = &columns[i]
+		}
+
+		rows.Scan(columnPointers...)
+		var data  []string
+		for i, _ := range cols {
+			data =append(data, columns[i])
+		}
+		result = append(result, data)
+	}
+	return result,nil
+}
+
+func (e *DbHelper) SqlStructMap(query string,outMap interface{})(err error) {
+	v:=reflect.ValueOf(outMap)
+	if v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
+
+	t := v.Type()
+	if t.Kind()!=reflect.Map{
+		return fmt.Errorf("params in must is slice")
+	}
+	typ := t.Elem()
+	if typ.Kind()!= reflect.Struct {
+		return fmt.Errorf("params element  must is struct")
+	}
+	m := reflect.New(typ).Elem().Interface()
+	table, _, _, fields, _ := e.genInfo(m)
+
+	q := fmt.Sprintf("SELECT %s FROM %s WHERE %s ", strings.Join(fields, ","), table, query)
+	if e.debug {
+		log.Println(q)
+	}
+	rows, err := e.conn.Query(q)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	valuePtr := reflect.ValueOf(outMap)
+	value := valuePtr.Elem()
+	for rows.Next() {
+		newObj := e.newBy(m)
+		values := e.genValues(newObj)
+		newValue := e.getElem(newObj)
+		idv:=newValue.FieldByName("ID")
+		rows.Scan(values...)
+		value.SetMapIndex(idv,reflect.ValueOf(newObj).Elem())
+	}
+
+	return nil
+
+}
+func (e *DbHelper) SqlStructSlice(query string,outSlice interface{})(err error){
+	v:=reflect.ValueOf(outSlice)
+	if v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
+
+	t := v.Type()
+	if t.Kind()!=reflect.Slice{
+		return fmt.Errorf("params in must is slice")
+	}
+	typ := t.Elem()
+	if typ.Kind()!= reflect.Struct {
+		return fmt.Errorf("params element  must is struct")
+	}
+	m := reflect.New(typ).Elem().Interface()
+	table, _, _, fields, _ := e.genInfo(m)
+
+	q := fmt.Sprintf("SELECT %s FROM %s WHERE %s ", strings.Join(fields, ","), table, query)
+	if e.debug {
+		log.Println(q)
+	}
+	rows, err := e.conn.Query(q)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	valuePtr := reflect.ValueOf(outSlice)
+	value := valuePtr.Elem()
+	for rows.Next() {
+		newObj := e.newBy(m)
+		values := e.genValues(newObj)
+		rows.Scan(values...)
+		value.Set(reflect.Append(value, reflect.ValueOf(newObj).Elem()))
+	}
+
+	return nil
+}
+
 func (e *DbHelper) Query(m interface{}, outSlice interface{}) (err error) {
 	table, _, _, fields, values := e.genInfo(m)
 	var query []string

@@ -35,6 +35,62 @@ func TestCURD(t *testing.T) {
 
 	db := NewHelper(dbConn, nil, false)
 
+	t.Run("SqlSlice", func(t *testing.T) {
+		//query:="select * from article where title like '%jhh%' order by id limit 2"
+		query:="select * from article where id=9"
+		articles,err:=db.SqlSlice(query)
+		if err!=nil{
+			t.Log(err)
+		}
+		for i, article := range articles {
+			if i==0{
+				assert.Equal(t,article[i],"9")
+			}
+			log.Printf("%+v\n", article)
+		}
+	})
+
+
+	t.Run("SqlMap", func(t *testing.T) {
+		//query:="select * from article where title like '%jhh%' order by id limit 2"
+		query:="select * from article where id=2"
+		articles,err:=db.SqlMap(query)
+		if err!=nil{
+			t.Log(err)
+		}
+		for _, article := range articles {
+			//assert.Matches(t,article['title'],"jhh")
+			assert.Equal(t,article["id"],"2")
+			//log.Printf("%+v\n", article)
+		}
+	})
+
+	t.Run("SqlStructMap", func(t *testing.T) {
+		articles:= map[interface{}]Article{}
+		query:="title like '%jhh%' order by id limit 2"
+		if err:=db.SqlStructMap(query,&articles);err!=nil{
+			t.Log(err)
+		}
+		for k, article := range articles {
+			assert.Matches(t,article.Title,"jhh")
+			assert.Equal(t,article.ID,k)
+			//log.Printf("%+v\n", article)
+		}
+	})
+
+	t.Run("SqlStructSlice", func(t *testing.T) {
+		var articles []Article
+		query:="title like '%jhh%' order by id limit 2"
+		if err:=db.SqlStructSlice(query,&articles);err!=nil{
+			t.Log(err)
+		}
+		assert.Equal(t, len(articles),2)
+		for _, article := range articles {
+			assert.Matches(t,article.Title,"jhh")
+			//log.Printf("%+v\n", article)
+		}
+	})
+
 	t.Run("Query", func(t *testing.T) {
 		var articles []Article
 		q := Article{Title: "jhh2", Content: "jhh test 2"}

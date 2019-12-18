@@ -2,11 +2,9 @@
 ## Sample go database helper.
 
 1.step1 install
-    ```go    
     go get github.com/robteix/testmod    
-    ```
 2.step2 import
-    ```go    
+    ```go
     import (
         "database/sql"
         "log"

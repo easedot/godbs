@@ -1,8 +1,11 @@
-# godbs
+# godbs #
 ## Sample go database helper.
 
 1.step1 install
-    go get github.com/robteix/testmod    
+    ```shell
+    go get github.com/robteix/testmod
+    ```
+    
 2.step2 import
     ```go
     import (
@@ -12,8 +15,9 @@
         "github.com/easedot/godbs"
     )
     ```
+    
 3.step3 init database connection
-    ```go    
+    ```go
     type Article struct {
         ID        int64 
         Title     string
@@ -27,22 +31,22 @@
 		log.Println(err)
 	}
 	defer dbConn.Close()	     
-	db := godbs.NewHelper(dbConn, nil, false)    
-    ```    
+	db := godbs.NewHelper(dbConn, nil, false)        
+    ```
 
 4.step4 sample
 
    4.1 query 
    ```go
-	var articles []Article
-	q := Article{Title: "test_title", Content: "test_content"}
-	err = db.Query(&q, &articles)
-	if err != nil {
-		log.Println(err)
-	}
-	for _, article := range articles {
-		log.Printf("%+v\n", article)
-	}
+        var articles []Article
+        q := Article{Title: "test_title", Content: "test_content"}
+        err = db.Query(&q, &articles)
+        if err != nil {
+            log.Println(err)
+        }
+        for _, article := range articles {
+            log.Printf("%+v\n", article)
+        }
 
    ``` 
 

@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/magiconair/properties/assert"
-	"github.com/spf13/viper"
 )
 
 func TestCURD(t *testing.T) {
@@ -28,7 +27,7 @@ func TestCURD(t *testing.T) {
 	}
 	dsn := "user:password@tcp(0.0.0.0:3306)/article?loc=Asia%2FJakarta&parseTime=1"
 	dbConn, err := sql.Open(`mysql`, dsn)
-	if err != nil && viper.GetBool("debug") {
+	if err != nil {
 		log.Println(err)
 	}
 	defer dbConn.Close()

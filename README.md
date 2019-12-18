@@ -1,34 +1,43 @@
-# ****godbs
-# sample go database helper
+# godbs
+## Sample go database helper.
 
-```go
-package main
-
-import (
-	"database/sql"
-	"log"
-	"time"
-
-	"github.com/easedot/godbs"
-)
-
-type Article struct {
-	ID        int64 `pk:"id"`
-	Title     string
-	Content   string
-	UpdatedAt time.Time
-	CreatedAt time.Time
-}
-func main(){
+1.step1 install
+    ```go
+    go get github.com/robteix/testmod    
+    ```
+2.step2 import
+    ```go
+    import (
+        "database/sql"
+        "log"
+        "time"
+        "github.com/easedot/godbs"
+    )
+    ```
+3.step3 init database connection
+    ```go
+    type Article struct {
+        ID        int64 `pk:"id"`
+        Title     string
+        Content   string
+        UpdatedAt time.Time
+        CreatedAt time.Time
+    }
 	dsn := "user:password@tcp(0.0.0.0:3306)/article"
 	dbConn, err := sql.Open(`mysql`, dsn)
 	if err != nil  {
 		log.Println(err)
 	}
 	defer dbConn.Close()
-
+     
 	db := godbs.NewHelper(dbConn, nil, false)
+    
+    ```    
 
+4.step4 query create update delete
+
+   4.1
+   ```go
 	var articles []Article
 	q := Article{Title: "jhh2", Content: "jhh test 2"}
 	err = db.Query(&q, &articles)
@@ -39,6 +48,5 @@ func main(){
 		log.Printf("%+v\n", article)
 	}
 
-}
+   ``` 
 
-```

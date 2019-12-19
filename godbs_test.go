@@ -169,10 +169,8 @@ func TestCURD(t *testing.T) {
 
 		err = db.WithTrans(
 			func(tx *DbHelper) error {
-				if err := tx.Update(u); err != nil {
-					t.Log(err)
-				}
-				return nil
+				err:= tx.Update(u)
+				return err
 			},
 		)
 		if err != nil {

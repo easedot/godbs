@@ -25,13 +25,13 @@
         UpdatedAt time.Time
         CreatedAt time.Time
     }
-	dsn := "user:password@tcp(0.0.0.0:3306)/article"
-	dbConn, err := sql.Open("mysql", dsn)
-	if err != nil  {
-		log.Println(err)
-	}
-	defer dbConn.Close()	     
-	db := godbs.NewHelper(dbConn, nil, false)        
+    dsn := "user:password@tcp(0.0.0.0:3306)/article"
+    dbConn, err := sql.Open("mysql", dsn)
+    if err != nil  {
+        log.Println(err)
+    }
+    defer dbConn.Close()	     
+    db := godbs.NewHelper(dbConn, nil, false)        
     ```
 
 4.step4 sample
@@ -42,7 +42,7 @@
         q := Article{Title: "test_title", Content: "test_content"}
         err = db.Query(&q, &articles)
         if err != nil {
-            log.Println(err)
+            ...
         }
         for _, article := range articles {
             log.Printf("%+v\n", article)
@@ -55,7 +55,7 @@
 		var transId int64 = 7
 		article := Article{ID: transId}
 		if err := db.Find(&article); err != nil {
-			t.Log(err)
+			...
 		}
         log.Printf("%+v\n", article)
    ``` 
@@ -64,22 +64,16 @@
 		createTitle := "test create"
 		c := Article{Title: createTitle, Content: "jhh test 2"}
 		if err := db.Create(&c); err != nil {
-			t.Log(err)
+			...
 		}
    ``` 
    4.3 trans update
    ```go        
 		err = db.WithTrans(
 			func(tx *DbHelper) error {
-        		u := Article{ID: 2, Title: 'test transaction'}
-				if err := tx.Update(u); err != nil {
-					t.Log(err)
-				}
-				return nil
+				err:= tx.Update(u)
+				return err
 			},
 		)
-		if err != nil {
-			t.Log(err)
-		}
    ``` 
     

@@ -2,11 +2,12 @@
 ## Sample go database helper.
 
 1.step1 install
+
     ```
     go get github.com/robteix/testmod
-    ```
-    
+    ```    
 2.step2 import
+
     ```go
     import (
         "database/sql"
@@ -14,8 +15,9 @@
         "time"
         "github.com/easedot/godbs"
     )
-    ```
     
+    ```
+        
 3.step3 init database connection
     ```go
     type Article struct {
@@ -47,7 +49,6 @@
         for _, article := range articles {
             log.Printf("%+v\n", article)
         }
-
    ``` 
 
    4.2 find

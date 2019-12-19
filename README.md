@@ -2,7 +2,7 @@
 ## Sample go database helper.
 
 1.step1 install
-    ```shell
+    ```
     go get github.com/robteix/testmod
     ```
     

@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/magiconair/properties/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCURD(t *testing.T) {
@@ -32,21 +32,16 @@ func TestCURD(t *testing.T) {
 	}
 	defer dbConn.Close()
 
-	db := NewHelper(dbConn, nil, false)
+	db := NewHelper(dbConn, false)
 
 	t.Run("SqlSlice", func(t *testing.T) {
-		//query:="select * from article where title like '%jhh%' order by id limit 2"
 		query:="select * from article where id=9"
 		articles,err:=db.SqlSlice(query)
 		if err!=nil{
-			t.Log(err)
+			t.Error(err)
 		}
-		for i, article := range articles {
-			if i==0{
-				assert.Equal(t,article[i],"9")
-			}
-			log.Printf("%+v\n", article)
-		}
+		assert.Len(t,articles,1)
+		assert.Equal(t,"9",articles[0][0])
 	})
 
 
@@ -57,49 +52,45 @@ func TestCURD(t *testing.T) {
 		if err!=nil{
 			t.Log(err)
 		}
-		for _, article := range articles {
-			//assert.Matches(t,article['title'],"jhh")
-			assert.Equal(t,article["id"],"2")
-			//log.Printf("%+v\n", article)
-		}
+		assert.Len(t,articles,1)
+		assert.Equal(t,"2",articles[0]["id"])
 	})
 
 	t.Run("SqlStructMap", func(t *testing.T) {
-		articles:= map[interface{}]Article{}
+		r := map[interface{}]Article{}
 		query:="title like '%jhh%' order by id limit 2"
-		if err:=db.SqlStructMap(query,&articles);err!=nil{
+		if err:=db.SqlStructMap(query,&r);err!=nil{
 			t.Log(err)
 		}
-		for k, article := range articles {
-			assert.Matches(t,article.Title,"jhh")
-			assert.Equal(t,article.ID,k)
-			//log.Printf("%+v\n", article)
+		for k, article := range r {
+			assert.Contains(t,article.Title,"jhh")
+			assert.Equal(t,k,article.ID)
 		}
 	})
 
 	t.Run("SqlStructSlice", func(t *testing.T) {
-		var articles []Article
+		var r []Article
 		query:="title like '%jhh%' order by id limit 2"
-		if err:=db.SqlStructSlice(query,&articles);err!=nil{
+		if err:=db.SqlStructSlice(query,&r);err!=nil{
 			t.Log(err)
 		}
-		assert.Equal(t, len(articles),2)
-		for _, article := range articles {
-			assert.Matches(t,article.Title,"jhh")
+		assert.Equal(t, len(r),2)
+		for _, article := range r {
+			assert.Contains(t,article.Title,"jhh")
 			//log.Printf("%+v\n", article)
 		}
 	})
 
 	t.Run("Query", func(t *testing.T) {
-		var articles []Article
+		var r []Article
 		q := Article{Title: "jhh2", Content: "jhh test 2"}
 		//q := Article{ID: 9}
-		err := db.Query(&q, &articles)
+		err := db.Query(&q, &r)
 		if err != nil {
 			log.Println(err)
 		}
-		for _, article := range articles {
-			assert.Equal(t, article.Title, "jhh2")
+		for _, article := range r {
+			assert.Equal(t,"jhh2", article.Title)
 			//log.Printf("%+v\n", article)
 		}
 
@@ -110,7 +101,7 @@ func TestCURD(t *testing.T) {
 		if err := db.Find(&a); err != nil {
 			t.Log(err)
 		}
-		assert.Equal(t, a.Title, "jhh2")
+		assert.Equal(t, "jhh2",a.Title)
 	})
 
 	t.Run("Create", func(t *testing.T) {
@@ -124,7 +115,7 @@ func TestCURD(t *testing.T) {
 		if err := db.Find(&cf); err != nil {
 			t.Log(err)
 		}
-		assert.Equal(t, cf.Title, createTitle)
+		assert.Equal(t, createTitle,cf.Title)
 
 		updateTitle := "test update"
 		u := Article{ID: c.ID, Title: updateTitle}
@@ -135,7 +126,7 @@ func TestCURD(t *testing.T) {
 		if err := db.Find(&uf); err != nil {
 			t.Log(err)
 		}
-		assert.Equal(t, uf.Title, updateTitle)
+		assert.Equal(t, updateTitle,uf.Title)
 
 		d := Article{ID: c.ID}
 		if err := db.Delete(d); err != nil {
@@ -165,7 +156,7 @@ func TestCURD(t *testing.T) {
 		if err := db.Find(&rf); err != nil {
 			t.Log(err)
 		}
-		assert.Equal(t, rf.Title, of.Title, fmt.Sprintf("rollback update to old:%s", rf.Title))
+		assert.Equal(t, of.Title,rf.Title, fmt.Sprintf("rollback update to old:%s", rf.Title))
 
 		err = db.WithTrans(
 			func(tx *DbHelper) error {
@@ -181,7 +172,7 @@ func TestCURD(t *testing.T) {
 			t.Log(err)
 		}
 		//commit update check
-		assert.Equal(t, uf.Title, transTitle)
+		assert.Equal(t, transTitle,uf.Title)
 
 		if err := db.Update(of); err != nil {
 			t.Log(err)
@@ -191,7 +182,7 @@ func TestCURD(t *testing.T) {
 			t.Log(err)
 		}
 		//commit update check
-		assert.Equal(t, lf.Title, of.Title)
+		assert.Equal(t, of.Title,lf.Title)
 
 	})
 }

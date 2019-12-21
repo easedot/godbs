@@ -26,14 +26,10 @@ type DbHelper struct {
 	conn  Transaction
 }
 
-func NewHelper(db *sql.DB, tx *sql.Tx, debug bool) DbHelper {
+func NewHelper(db *sql.DB, debug bool) DbHelper {
 	helper := DbHelper{}
 	helper.db = db
-	if tx == nil {
-		helper.conn = db
-	} else {
-		helper.conn = tx
-	}
+	helper.conn = db
 	helper.debug = debug
 	return helper
 }
@@ -56,7 +52,8 @@ func (e *DbHelper) WithTrans(block TransFunc) error {
 			tx.Commit()
 		}
 	}()
-	db := NewHelper(e.db, tx, e.debug)
+	db := NewHelper(e.db, e.debug)
+	db.conn=tx
 	err = block(&db)
 	return err
 }
@@ -115,7 +112,7 @@ func (e *DbHelper) SqlSlice(query string)([][]string, error){
 	return result,nil
 }
 
-func (e *DbHelper) SqlStructMap(query string,outMap interface{})(err error) {
+func (e *DbHelper) SqlStructMap(where string,outMap interface{})(err error) {
 	v:=reflect.ValueOf(outMap)
 	if v.Kind() == reflect.Ptr {
 		v = v.Elem()
@@ -132,7 +129,7 @@ func (e *DbHelper) SqlStructMap(query string,outMap interface{})(err error) {
 	m := reflect.New(typ).Elem().Interface()
 	table, _, _, fields, _ := e.genInfo(m)
 
-	q := fmt.Sprintf("SELECT %s FROM %s WHERE %s ", strings.Join(fields, ","), table, query)
+	q := fmt.Sprintf("SELECT %s FROM %s WHERE %s ", strings.Join(fields, ","), table, where)
 	if e.debug {
 		log.Println(q)
 	}
@@ -155,7 +152,7 @@ func (e *DbHelper) SqlStructMap(query string,outMap interface{})(err error) {
 	return nil
 
 }
-func (e *DbHelper) SqlStructSlice(query string,outSlice interface{})(err error){
+func (e *DbHelper) SqlStructSlice(where string,outSlice interface{})(err error){
 	v:=reflect.ValueOf(outSlice)
 	if v.Kind() == reflect.Ptr {
 		v = v.Elem()
@@ -172,7 +169,7 @@ func (e *DbHelper) SqlStructSlice(query string,outSlice interface{})(err error){
 	m := reflect.New(typ).Elem().Interface()
 	table, _, _, fields, _ := e.genInfo(m)
 
-	q := fmt.Sprintf("SELECT %s FROM %s WHERE %s ", strings.Join(fields, ","), table, query)
+	q := fmt.Sprintf("SELECT %s FROM %s WHERE %s ", strings.Join(fields, ","), table, where)
 	if e.debug {
 		log.Println(q)
 	}

@@ -71,6 +71,79 @@ func (e *DbHelper) Find(m interface{}) (err error) {
 	return
 }
 
+func (e *DbHelper) Query(m interface{}, outSlice interface{}) (err error) {
+	table, _, _, fields, values := e.genInfo(m)
+	var query []string
+	for k, v := range values {
+		query = append(query, fmt.Sprintf("%s=%v", k, v))
+	}
+	q := fmt.Sprintf("SELECT %s FROM %s WHERE %s ", strings.Join(fields, ","), table, strings.Join(query, " and "))
+	if e.debug {
+		log.Println(q)
+	}
+	rows, err := e.conn.Query(q)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	valuePtr := reflect.ValueOf(outSlice)
+	value := valuePtr.Elem()
+	for rows.Next() {
+		newObj := e.newBy(m)
+		values := e.genValues(newObj)
+		rows.Scan(values...)
+		value.Set(reflect.Append(value, reflect.ValueOf(newObj).Elem()))
+	}
+	return nil
+}
+
+func (e *DbHelper) Create(m interface{}) (err error) {
+	table, _, idv, _, values := e.genInfo(m)
+	var vals []string
+	var fields []string
+	for k, v := range values {
+		fields = append(fields, fmt.Sprintf("%v", k))
+		vals = append(vals, fmt.Sprintf("%v", v))
+	}
+	q := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s) ", table, strings.Join(fields, ","), strings.Join(vals, ","))
+	if e.debug {
+		log.Println(q)
+	}
+	result, err := e.conn.Exec(q)
+	newId, _ := result.LastInsertId()
+	idv.SetInt(newId)
+	return
+}
+
+func (e *DbHelper) Update(m interface{}) (err error) {
+	table, id, idv, _, values := e.genInfo(m)
+	if !idv.IsValid() {
+		return fmt.Errorf("Update must set id")
+	}
+	var updates []string
+	for k, v := range values {
+		if k != id {
+			updates = append(updates, fmt.Sprintf("%s=%v", k, v))
+		}
+	}
+	q := fmt.Sprintf("UPDATE %s SET %s WHERE %s=%v", table, strings.Join(updates, ","), id, idv)
+	if e.debug {
+		log.Println(q)
+	}
+	_, err = e.conn.Exec(q)
+	return
+}
+
+func (e *DbHelper) Delete(m interface{}) (err error) {
+	table, id, idv, _, _ := e.genInfo(m)
+	q := fmt.Sprintf("DELETE FROM %s WHERE %s=%v ", table, id, idv)
+	if e.debug {
+		log.Println(q)
+	}
+	_, err = e.conn.Exec(q)
+	return
+}
+
 func (e *DbHelper) SqlMap(query string)([]map[string]string, error){
 	rows, _ := e.conn.Query(query)
 	cols, _ := rows.Columns()
@@ -190,81 +263,15 @@ func (e *DbHelper) SqlStructSlice(where string,outSlice interface{})(err error){
 	return nil
 }
 
-func (e *DbHelper) Query(m interface{}, outSlice interface{}) (err error) {
-	table, _, _, fields, values := e.genInfo(m)
-	var query []string
-	for k, v := range values {
-		query = append(query, fmt.Sprintf("%s=%v", k, v))
-	}
-	q := fmt.Sprintf("SELECT %s FROM %s WHERE %s ", strings.Join(fields, ","), table, strings.Join(query, " and "))
-	if e.debug {
-		log.Println(q)
-	}
-	rows, err := e.conn.Query(q)
-	if err != nil {
-		return err
-	}
-	defer rows.Close()
-	valuePtr := reflect.ValueOf(outSlice)
-	value := valuePtr.Elem()
-	for rows.Next() {
-		newObj := e.newBy(m)
-		values := e.genValues(newObj)
-		rows.Scan(values...)
-		value.Set(reflect.Append(value, reflect.ValueOf(newObj).Elem()))
-	}
-	return nil
-}
-
-func (e *DbHelper) Create(m interface{}) (err error) {
-	table, _, idv, _, values := e.genInfo(m)
-	var vals []string
-	var fields []string
-	for k, v := range values {
-		fields = append(fields, fmt.Sprintf("%v", k))
-		vals = append(vals, fmt.Sprintf("%v", v))
-	}
-	q := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s) ", table, strings.Join(fields, ","), strings.Join(vals, ","))
-	if e.debug {
-		log.Println(q)
-	}
-	result, err := e.conn.Exec(q)
-	newId, _ := result.LastInsertId()
-	idv.SetInt(newId)
-	return
-}
-
-func (e *DbHelper) Update(m interface{}) (err error) {
-	table, id, idv, _, values := e.genInfo(m)
-	if !idv.IsValid() {
-		return fmt.Errorf("Update must set id")
-	}
-	var updates []string
-	for k, v := range values {
-		if k != id {
-			updates = append(updates, fmt.Sprintf("%s=%v", k, v))
-		}
-	}
-	q := fmt.Sprintf("UPDATE %s SET %s WHERE %s=%v", table, strings.Join(updates, ","), id, idv)
-	if e.debug {
-		log.Println(q)
-	}
-	_, err = e.conn.Exec(q)
-	return
-}
-
-func (e *DbHelper) Delete(m interface{}) (err error) {
-	table, id, idv, _, _ := e.genInfo(m)
-	q := fmt.Sprintf("DELETE FROM %s WHERE %s=%v ", table, id, idv)
-	if e.debug {
-		log.Println(q)
-	}
-	_, err = e.conn.Exec(q)
-	return
-}
-
-func (e *DbHelper) ToMap(m interface{}) map[string]interface{} {
+func (e *DbHelper) StructToMap(m interface{}) map[string]interface{} {
 	var result map[string]interface{}
+	temp, _ := json.Marshal(m)
+	json.Unmarshal(temp, &result)
+	return result
+}
+
+func (e *DbHelper) MapToStruct(m map[string]interface{}) interface{}  {
+	var result interface{}
 	temp, _ := json.Marshal(m)
 	json.Unmarshal(temp, &result)
 	return result

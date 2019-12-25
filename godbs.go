@@ -263,6 +263,10 @@ func (e *DbHelper) SqlStructSlice(where string,outSlice interface{})(err error){
 	return nil
 }
 
+func (e *DbHelper) Close() error  {
+	return e.db.Close()
+}
+
 func (e *DbHelper) StructToMap(m interface{}) map[string]interface{} {
 	var result map[string]interface{}
 	temp, _ := json.Marshal(m)

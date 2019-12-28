@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -21,8 +20,8 @@ func TestCURD(t *testing.T) {
 		ID        int64 `pk:"id"`
 		Title     string
 		Content   string
-		UpdatedAt time.Time
-		CreatedAt time.Time
+		UpdatedAt sql.NullTime
+		CreatedAt sql.NullTime
 		Author    Author `db:"-"`
 	}
 	//dsn := "user:password@tcp(0.0.0.0:3306)/article?loc=Asia%2FShanghai&parseTime=1"

@@ -376,6 +376,7 @@ func (e *DbHelper) genInfo(in interface{}) (table string, pk string, pkv reflect
 func getFieldValue(v reflect.Value) string {
 	f := v
 	fieldValue := f.Interface()
+	const MySQLTimeFormat = "2006-01-02 15:04:05"
 
 	switch v := fieldValue.(type) {
 	case int64:
@@ -391,9 +392,10 @@ func getFieldValue(v reflect.Value) string {
 			return "true"
 		}
 		return "false"
+	case sql.NullTime:
+		return v.Time.Format(MySQLTimeFormat)
 	case time.Time:
 		//return v.String()
-		const MySQLTimeFormat = "2006-01-02 15:04:05"
 		return v.Format(MySQLTimeFormat)
 	default:
 		return ""

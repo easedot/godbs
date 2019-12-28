@@ -25,15 +25,15 @@ func TestCURD(t *testing.T) {
 		CreatedAt time.Time
 		Author    Author `db:"-"`
 	}
-	dsn := "user:password@tcp(0.0.0.0:3306)/article?loc=Asia%2FShanghai&parseTime=true"
-	//dsn := "user:password@tcp(0.0.0.0:3306)/article?parseTime=true"
+	//dsn := "user:password@tcp(0.0.0.0:3306)/article?loc=Asia%2FShanghai&parseTime=1"
+	dsn := "user:password@tcp(0.0.0.0:3306)/article?parseTime=true"
 	dbConn, err := sql.Open(`mysql`, dsn)
 	if err != nil {
 		log.Println(err)
 	}
 	defer dbConn.Close()
 
-	db := NewHelper(dbConn, false)
+	db := NewHelper(dbConn, true)
 
 	t.Run("SqlSlice", func(t *testing.T) {
 		query:="select * from article where id=1"

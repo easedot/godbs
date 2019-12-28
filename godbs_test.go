@@ -25,7 +25,8 @@ func TestCURD(t *testing.T) {
 		CreatedAt time.Time
 		Author    Author `db:"-"`
 	}
-	dsn := "user:password@tcp(0.0.0.0:3306)/article?loc=Asia%2FJakarta&parseTime=1"
+	dsn := "user:password@tcp(0.0.0.0:3306)/article?loc=Asia%2FShanghai&parseTime=true"
+	//dsn := "user:password@tcp(0.0.0.0:3306)/article?parseTime=true"
 	dbConn, err := sql.Open(`mysql`, dsn)
 	if err != nil {
 		log.Println(err)
@@ -35,13 +36,13 @@ func TestCURD(t *testing.T) {
 	db := NewHelper(dbConn, false)
 
 	t.Run("SqlSlice", func(t *testing.T) {
-		query:="select * from article where id=9"
+		query:="select * from article where id=1"
 		articles,err:=db.SqlSlice(query)
 		if err!=nil{
 			t.Error(err)
 		}
 		assert.Len(t,articles,1)
-		assert.Equal(t,"9",articles[0][0])
+		assert.Equal(t,"1",articles[0][0])
 	})
 
 
@@ -57,51 +58,51 @@ func TestCURD(t *testing.T) {
 	})
 
 	t.Run("SqlStructMap", func(t *testing.T) {
-		r := map[interface{}]Article{}
-		query:="title like '%jhh%' order by id limit 2"
+		r := map[interface{}]*Article{}
+		query:="id in (1,2,3) order by id limit 2"
 		if err:=db.SqlStructMap(query,&r);err!=nil{
 			t.Log(err)
 		}
 		for k, article := range r {
-			assert.Contains(t,article.Title,"jhh")
 			assert.Equal(t,k,article.ID)
+			//log.Printf("%+v\n", article)
 		}
 	})
 
 	t.Run("SqlStructSlice", func(t *testing.T) {
 		var r []Article
-		query:="title like '%jhh%' order by id limit 2"
+		query:="id in (1,2) order by id limit 2"
 		if err:=db.SqlStructSlice(query,&r);err!=nil{
 			t.Log(err)
 		}
 		assert.Equal(t, len(r),2)
-		for _, article := range r {
-			assert.Contains(t,article.Title,"jhh")
-			//log.Printf("%+v\n", article)
-		}
+		assert.Equal(t,int64(1),r[0].ID)
+		//for _, article := range r {
+		//	log.Printf("%+v\n", article)
+		//}
 	})
 
 	t.Run("Query", func(t *testing.T) {
-		var r []Article
-		q := Article{Title: "jhh2", Content: "jhh test 2"}
-		//q := Article{ID: 9}
+		var r []*Article
+		//q := Article{Title: "jhh2", Content: "jhh test 2"}
+		q := Article{ID: 1}
 		err := db.Query(&q, &r)
 		if err != nil {
 			log.Println(err)
 		}
 		for _, article := range r {
-			assert.Equal(t,"jhh2", article.Title)
+			assert.Equal(t,int64(1), article.ID)
 			//log.Printf("%+v\n", article)
 		}
 
 	})
 
 	t.Run("Find", func(t *testing.T) {
-		a := Article{ID: 9}
+		a := Article{ID: 1}
 		if err := db.Find(&a); err != nil {
 			t.Log(err)
 		}
-		assert.Equal(t, "jhh2",a.Title)
+		assert.Equal(t, int64(1),a.ID)
 	})
 
 	t.Run("Create", func(t *testing.T) {
@@ -134,15 +135,16 @@ func TestCURD(t *testing.T) {
 		}
 		//?check delete
 	})
-	t.Run("Trans", func(t *testing.T) {
+
+	t.Run("TransRollback",func(t *testing.T){
 		transTitle := "test update2"
-		var transId int64 = 7
-		of := Article{ID: transId}
+		var transID int64 = 1
+		of := Article{ID: transID}
 		if err := db.Find(&of); err != nil {
 			t.Log(err)
 		}
 
-		u := Article{ID: transId, Title: transTitle}
+		u := Article{ID: transID, Title: transTitle}
 		err = db.WithTrans(
 			func(tx *DbHelper) error {
 				if err := tx.Update(u); err != nil {
@@ -152,12 +154,23 @@ func TestCURD(t *testing.T) {
 			},
 		)
 		//check rollback update,title rollback old
-		rf := Article{ID: transId}
+		rf := Article{ID: transID}
 		if err := db.Find(&rf); err != nil {
 			t.Log(err)
 		}
 		assert.Equal(t, of.Title,rf.Title, fmt.Sprintf("rollback update to old:%s", rf.Title))
 
+	})
+
+	t.Run("TransCommit", func(t *testing.T) {
+		transTitle := "test update2"
+		var transID int64 = 1
+		of := Article{ID: transID}
+		if err := db.Find(&of); err != nil {
+			t.Log(err)
+		}
+
+		u := Article{ID: transID, Title: transTitle}
 		err = db.WithTrans(
 			func(tx *DbHelper) error {
 				err:= tx.Update(u)
@@ -167,7 +180,7 @@ func TestCURD(t *testing.T) {
 		if err != nil {
 			t.Log(err)
 		}
-		uf := Article{ID: transId}
+		uf := Article{ID: transID}
 		if err := db.Find(&uf); err != nil {
 			t.Log(err)
 		}
@@ -177,7 +190,7 @@ func TestCURD(t *testing.T) {
 		if err := db.Update(of); err != nil {
 			t.Log(err)
 		}
-		lf := Article{ID: transId}
+		lf := Article{ID: transID}
 		if err := db.Find(&lf); err != nil {
 			t.Log(err)
 		}
@@ -211,7 +224,7 @@ var (
 func BenchmarkToSnake(b *testing.B) {
 	for _, snake := range toSnakes {
 		b.Run(snake.name, func(b *testing.B) {
-			for k, _ := range convertData {
+			for k:= range convertData {
 				for i := 0; i < b.N; i++ {
 					snake.fun(k)
 				}

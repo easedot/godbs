@@ -14,3 +14,4 @@
 # Dependency directories (removse the comment below to include it)
 # vendor/
 .idea/
+/bin/

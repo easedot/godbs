@@ -7,9 +7,11 @@ import (
 "log"
 "reflect"
 "regexp"
-"strings"
+	"strconv"
+	"strings"
+	"time"
 
-_ "github.com/go-sql-driver/mysql"
+	_ "github.com/go-sql-driver/mysql"
 )
 
 //For sql.DB and sql.Tx Replace
@@ -67,17 +69,25 @@ func (e *DbHelper) Find(m interface{}) (err error) {
 	valuesPtr := e.genValues(m)
 	//err = e.conn.QueryRow(q).Scan(valuesPtr...)
 
-	e.conn.QueryRow(q).Scan(valuesPtr...)
+	err=e.conn.QueryRow(q).Scan(valuesPtr...)
 	return
 }
 
 func (e *DbHelper) Query(m interface{}, outSlice interface{}) (err error) {
+	valuePtr := reflect.ValueOf(outSlice)
+	value := valuePtr.Elem()
+	elemType := valuePtr.Type().Elem().Kind()
+	if valuePtr.Kind()==reflect.Ptr{
+		elemType = reflect.TypeOf(value.Interface()).Elem().Kind()
+	}
+
 	table, _, _, fields, values := e.genInfo(m)
 	var query []string
 	for k, v := range values {
 		query = append(query, fmt.Sprintf("%s=%v", k, v))
 	}
-	q := fmt.Sprintf("SELECT %s FROM %s WHERE %s ", strings.Join(fields, ","), table, strings.Join(query, " and "))
+	q := fmt.Sprintf("SELECT %s FROM %s WHERE %s ",
+		strings.Join(fields, ","), table, strings.Join(query, " and "))
 	if e.debug {
 		log.Println(q)
 	}
@@ -86,13 +96,16 @@ func (e *DbHelper) Query(m interface{}, outSlice interface{}) (err error) {
 		return err
 	}
 	defer rows.Close()
-	valuePtr := reflect.ValueOf(outSlice)
-	value := valuePtr.Elem()
+
 	for rows.Next() {
 		newObj := e.newBy(m)
 		values := e.genValues(newObj)
 		rows.Scan(values...)
-		value.Set(reflect.Append(value, reflect.ValueOf(newObj).Elem()))
+		if elemType ==reflect.Ptr{ //for outSlice= []*Object
+			value.Set(reflect.Append(value, reflect.ValueOf(newObj)))
+		}else{//for outSlice= []Object
+			value.Set(reflect.Append(value, reflect.ValueOf(newObj).Elem()))
+		}
 	}
 	return nil
 }
@@ -151,7 +164,7 @@ func (e *DbHelper) SqlMap(query string)([]map[string]string, error){
 	for rows.Next() {
 		columns := make([]string, len(cols))
 		columnPointers := make([]interface{}, len(cols))
-		for i, _ := range columns {
+		for i := range columns {
 			columnPointers[i] = &columns[i]
 		}
 
@@ -164,6 +177,7 @@ func (e *DbHelper) SqlMap(query string)([]map[string]string, error){
 	}
 	return result,nil
 }
+
 func (e *DbHelper) SqlSlice(query string)([][]string, error){
 	rows, _ := e.conn.Query(query)
 	cols, _ := rows.Columns()
@@ -171,13 +185,13 @@ func (e *DbHelper) SqlSlice(query string)([][]string, error){
 	for rows.Next() {
 		columns := make([]string, len(cols))
 		columnPointers := make([]interface{}, len(cols))
-		for i, _ := range columns {
+		for i:= range columns {
 			columnPointers[i] = &columns[i]
 		}
 
 		rows.Scan(columnPointers...)
 		var data  []string
-		for i, _ := range cols {
+		for i := range cols {
 			data =append(data, columns[i])
 		}
 		result = append(result, data)
@@ -186,20 +200,34 @@ func (e *DbHelper) SqlSlice(query string)([][]string, error){
 }
 
 func (e *DbHelper) SqlStructMap(where string,outMap interface{})(err error) {
-	v:=reflect.ValueOf(outMap)
-	if v.Kind() == reflect.Ptr {
-		v = v.Elem()
-	}
-
-	t := v.Type()
-	if t.Kind()!=reflect.Map{
+	valuePtr := reflect.ValueOf(outMap)
+	value := valuePtr.Elem()
+	elemType := valuePtr.Type().Elem()
+	elemKind := elemType.Kind()
+	if elemKind!=reflect.Map{
 		return fmt.Errorf("params in must is slice")
 	}
-	typ := t.Elem()
-	if typ.Kind()!= reflect.Struct {
-		return fmt.Errorf("params element  must is struct")
+
+	if valuePtr.Kind()==reflect.Ptr{
+		elemType =reflect.TypeOf(value.Interface()).Elem()
+		elemKind = elemType.Kind()
 	}
-	m := reflect.New(typ).Elem().Interface()
+	if elemKind ==reflect.Ptr{
+		if elemType.Elem().Kind()!= reflect.Struct {
+			return fmt.Errorf("params element  must is struct")
+		}
+	}else{
+		if elemType.Kind()!= reflect.Struct {
+			return fmt.Errorf("params element  must is struct")
+		}
+	}
+	var m interface{}
+	if elemKind ==reflect.Ptr { //for *Object
+		m = reflect.New(elemType.Elem()).Interface()
+	}else{ //for Object
+		m = reflect.New(elemType).Elem().Interface()
+	}
+
 	table, _, _, fields, _ := e.genInfo(m)
 
 	q := fmt.Sprintf("SELECT %s FROM %s WHERE %s ", strings.Join(fields, ","), table, where)
@@ -211,35 +239,54 @@ func (e *DbHelper) SqlStructMap(where string,outMap interface{})(err error) {
 		return err
 	}
 	defer rows.Close()
-	valuePtr := reflect.ValueOf(outMap)
-	value := valuePtr.Elem()
 	for rows.Next() {
 		newObj := e.newBy(m)
 		values := e.genValues(newObj)
 		newValue := e.getElem(newObj)
 		idv:=newValue.FieldByName("ID")
 		rows.Scan(values...)
-		value.SetMapIndex(idv,reflect.ValueOf(newObj).Elem())
+
+		if elemKind ==reflect.Ptr{ //for outSlice= []*Object
+			value.SetMapIndex(idv, reflect.ValueOf(newObj))
+		}else{
+			value.SetMapIndex(idv, reflect.ValueOf(newObj).Elem())
+		}
 	}
 
 	return nil
 
 }
 func (e *DbHelper) SqlStructSlice(where string,outSlice interface{})(err error){
-	v:=reflect.ValueOf(outSlice)
-	if v.Kind() == reflect.Ptr {
-		v = v.Elem()
-	}
-
-	t := v.Type()
-	if t.Kind()!=reflect.Slice{
+	valuePtr := reflect.ValueOf(outSlice)
+	value := valuePtr.Elem()
+	elemType := valuePtr.Type().Elem()
+	elemKind := elemType.Kind()
+	if elemKind!=reflect.Slice{
 		return fmt.Errorf("params in must is slice")
 	}
-	typ := t.Elem()
-	if typ.Kind()!= reflect.Struct {
-		return fmt.Errorf("params element  must is struct")
+
+	if valuePtr.Kind()==reflect.Ptr{
+		elemType =reflect.TypeOf(value.Interface()).Elem()
+		elemKind = elemType.Kind()
 	}
-	m := reflect.New(typ).Elem().Interface()
+	if elemKind ==reflect.Ptr{
+		if elemType.Elem().Kind()!= reflect.Struct {
+			return fmt.Errorf("params element  must is struct")
+		}
+	}else{
+		if elemType.Kind()!= reflect.Struct {
+			return fmt.Errorf("params element  must is struct")
+		}
+	}
+
+
+	var m interface{}
+	if elemKind ==reflect.Ptr { //for *Object
+		m = reflect.New(elemType.Elem()).Interface()
+	}else{ //for Object
+		m = reflect.New(elemType).Elem().Interface()
+	}
+
 	table, _, _, fields, _ := e.genInfo(m)
 
 	q := fmt.Sprintf("SELECT %s FROM %s WHERE %s ", strings.Join(fields, ","), table, where)
@@ -251,13 +298,16 @@ func (e *DbHelper) SqlStructSlice(where string,outSlice interface{})(err error){
 		return err
 	}
 	defer rows.Close()
-	valuePtr := reflect.ValueOf(outSlice)
-	value := valuePtr.Elem()
+
 	for rows.Next() {
 		newObj := e.newBy(m)
 		values := e.genValues(newObj)
 		rows.Scan(values...)
-		value.Set(reflect.Append(value, reflect.ValueOf(newObj).Elem()))
+		if elemKind ==reflect.Ptr{ //for outSlice= []*Object
+			value.Set(reflect.Append(value, reflect.ValueOf(newObj)))
+		}else{//for outSlice= []Object
+			value.Set(reflect.Append(value, reflect.ValueOf(newObj).Elem()))
+		}
 	}
 
 	return nil
@@ -311,11 +361,8 @@ func (e *DbHelper) genInfo(in interface{}) (table string, pk string, pkv reflect
 		fields = append(fields, fieldName)
 
 		if elemHaveValue(field) {
-			if field.Type().Kind() == reflect.String {
-				values[fieldName] = fmt.Sprintf("'%v'", field)
-			} else {
-				values[fieldName] = fmt.Sprintf("%v", field)
-			}
+			//values[fieldName]= getFieldValue(field)
+			values[fieldName] = fmt.Sprintf("\"%v\"", getFieldValue(field))
 		}
 	}
 	if pk == "" {
@@ -326,6 +373,32 @@ func (e *DbHelper) genInfo(in interface{}) (table string, pk string, pkv reflect
 	return
 }
 
+func getFieldValue(v reflect.Value) string {
+	f := v
+	fieldValue := f.Interface()
+
+	switch v := fieldValue.(type) {
+	case int64:
+		return strconv.FormatInt(v, 10)
+	case int32:
+		return strconv.FormatInt(int64(v), 10)
+	case int:
+		return strconv.FormatInt(int64(v), 10)
+	case string:
+		return v
+	case bool:
+		if v {
+			return "true"
+		}
+		return "false"
+	case time.Time:
+		//return v.String()
+		const MySQLTimeFormat = "2006-01-02 15:04:05"
+		return v.Format(MySQLTimeFormat)
+	default:
+		return ""
+	}
+}
 func (e *DbHelper) genValues(in interface{}) (out []interface{}) {
 	v := e.getElem(in)
 	typ := v.Type()
@@ -365,7 +438,7 @@ func (e *DbHelper) getElem(in interface{}) reflect.Value {
 	return v
 }
 
-func (e *DbHelper) setId(m interface{}, id string, idv int64) {
+func (e *DbHelper) setID(m interface{}, id string, idv int64) {
 	reflect.ValueOf(m).Elem().FieldByName(id).SetInt(idv)
 }
 

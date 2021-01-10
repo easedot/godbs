@@ -14,6 +14,8 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
+const mySQLTimeFormat = "2006-01-02 15:04:05"
+
 //For sql.DB and sql.Tx Replace
 type Transaction interface {
 	Exec(query string, args ...interface{}) (sql.Result, error)
@@ -361,8 +363,8 @@ func (e *DbHelper) genInfo(in interface{}) (table string, pk string, pkv reflect
 		fields = append(fields, fieldName)
 
 		if elemHaveValue(field) {
-			//values[fieldName]= getFieldValue(field)
-			values[fieldName] = fmt.Sprintf("\"%v\"", getFieldValue(field))
+			values[fieldName]= getFieldValue(field)
+			//values[fieldName] = fmt.Sprintf("\"%v\"", getFieldValue(field))
 		}
 	}
 	if pk == "" {
@@ -374,9 +376,7 @@ func (e *DbHelper) genInfo(in interface{}) (table string, pk string, pkv reflect
 }
 
 func getFieldValue(v reflect.Value) string {
-	f := v
-	fieldValue := f.Interface()
-	const MySQLTimeFormat = "2006-01-02 15:04:05"
+	fieldValue := v.Interface()
 
 	switch v := fieldValue.(type) {
 	case int64:
@@ -386,17 +386,17 @@ func getFieldValue(v reflect.Value) string {
 	case int:
 		return strconv.FormatInt(int64(v), 10)
 	case string:
-		return v
+		return fmt.Sprintf("\"%v\"", v)
 	case bool:
 		if v {
 			return "true"
 		}
 		return "false"
 	case sql.NullTime:
-		return v.Time.Format(MySQLTimeFormat)
+		return fmt.Sprintf("\"%v\"", v.Time.Format(mySQLTimeFormat))
 	case time.Time:
 		//return v.String()
-		return v.Format(MySQLTimeFormat)
+		return fmt.Sprintf("\"%v\"", v.Format(mySQLTimeFormat))
 	default:
 		return ""
 	}

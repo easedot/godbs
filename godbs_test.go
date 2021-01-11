@@ -84,7 +84,7 @@ func TestCURD(t *testing.T) {
 	t.Run("Query", func(t *testing.T) {
 		var r []*Article
 		//q := Article{Title: "jhh2", Content: "jhh test 2"}
-		q := Article{ID: 1}
+		q := Article{Title: "jhh"}
 		err := db.Query(&q, &r)
 		if err != nil {
 			log.Println(err)

@@ -17,7 +17,7 @@ func TestCURD(t *testing.T) {
 		UpdatedAt string
 	}
 	type Article struct {
-		ID        int64 `pk:"id"`
+		ID        int64 `"id"`
 		Title     string
 		Content   string
 		UpdatedAt sql.NullTime

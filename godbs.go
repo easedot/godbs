@@ -232,7 +232,7 @@ func (e *DbHelper) SqlStructMap(where string,outMap interface{})(err error) {
 
 	table, _, _, fields, _ := e.genInfo(m)
 
-	q := fmt.Sprintf("SELECT %s FROM %s WHERE %s ", strings.Join(fields, ","), table, where)
+	q := fmt.Sprintf("SELECT %s FROM %s  %s ", strings.Join(fields, ","), table, where)
 	if e.debug {
 		log.Println(q)
 	}
@@ -291,7 +291,7 @@ func (e *DbHelper) SqlStructSlice(where string,outSlice interface{})(err error){
 
 	table, _, _, fields, _ := e.genInfo(m)
 
-	q := fmt.Sprintf("SELECT %s FROM %s WHERE %s ", strings.Join(fields, ","), table, where)
+	q := fmt.Sprintf("SELECT %s FROM %s  %s ", strings.Join(fields, ","), table, where)
 	if e.debug {
 		log.Println(q)
 	}

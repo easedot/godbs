@@ -58,7 +58,7 @@ func TestCURD(t *testing.T) {
 
 	t.Run("SqlStructMap", func(t *testing.T) {
 		r := map[interface{}]*Article{}
-		query:="id in (1,2,3) order by id limit 2"
+		query:="where id in (1,2,3) order by id limit 2"
 		if err:=db.SqlStructMap(query,&r);err!=nil{
 			t.Log(err)
 		}
@@ -70,7 +70,7 @@ func TestCURD(t *testing.T) {
 
 	t.Run("SqlStructSlice", func(t *testing.T) {
 		var r []Article
-		query:="id in (1,2) order by id limit 2"
+		query:=" order by id limit 2"
 		if err:=db.SqlStructSlice(query,&r);err!=nil{
 			t.Log(err)
 		}

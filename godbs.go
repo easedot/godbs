@@ -131,7 +131,7 @@ func (e *DbHelper) Create(m interface{}) (err error) {
 }
 
 func (e *DbHelper) Update(m interface{}) (err error) {
-	table, id, idv, _, values := e.genInfo(m)
+	table, id, idv, _, values := e.genUpdateInfo(m)
 	if !idv.IsValid() {
 		return fmt.Errorf("Update must set id")
 	}
@@ -360,12 +360,54 @@ func (e *DbHelper) genInfo(in interface{}) (table string, pk string, pkv reflect
 				pkv = field
 			}
 		}
-		
+
+		fields = append(fields, fieldName)
+		//todo 这里先注释，因为更新时即使是空的，就是要更新成空的，如何解决
+		if elemHaveValue(field) {
+			values[fieldName]= getFieldValue(field)
+			//values[fieldName] = fmt.Sprintf("\"%v\"", getFieldValue(field))
+		}
+	}
+	if pk == "" {
+		pk = fields[0]
+		pkv = elem.Field(0)
+	}
+	table = strings.ToLower(typ.Name())
+	return
+}
+func (e *DbHelper) genUpdateInfo(in interface{}) (table string, pk string, pkv reflect.Value, fields []string, values map[string]string) {
+	elem := e.getElem(in)
+	values = make(map[string]string)
+	var fieldName string
+	typ := elem.Type()
+	fCount := elem.NumField()
+	for i := 0; i < fCount; i++ {
+		fieldType := typ.Field(i)
+		field := elem.Field(i)
+		if tag, ok := fieldType.Tag.Lookup("db"); ok {
+			if tag == "-" {
+				continue
+			}
+			fieldName = tag
+		} else {
+			fieldName = toSnake(fieldType.Name)
+		}
+
+		if tag, ok := fieldType.Tag.Lookup("pk"); ok {
+			pk = tag
+			pkv = field
+		} else {
+			if fieldName == "id" {
+				pk = fieldName
+				pkv = field
+			}
+		}
+
 		fields = append(fields, fieldName)
 		//todo 这里先注释，因为更新时即使是空的，就是要更新成空的，如何解决
 		//if elemHaveValue(field) {
-			values[fieldName]= getFieldValue(field)
-			//values[fieldName] = fmt.Sprintf("\"%v\"", getFieldValue(field))
+		values[fieldName]= getFieldValue(field)
+		//values[fieldName] = fmt.Sprintf("\"%v\"", getFieldValue(field))
 		//}
 	}
 	if pk == "" {

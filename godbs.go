@@ -361,11 +361,11 @@ func (e *DbHelper) genInfo(in interface{}) (table string, pk string, pkv reflect
 			}
 		}
 		fields = append(fields, fieldName)
-
-		if elemHaveValue(field) {
+		//todo 这里先注释，因为更新时即使是空的，就是要更新成空的，如何解决
+		//if elemHaveValue(field) {
 			values[fieldName]= getFieldValue(field)
 			//values[fieldName] = fmt.Sprintf("\"%v\"", getFieldValue(field))
-		}
+		//}
 	}
 	if pk == "" {
 		pk = fields[0]

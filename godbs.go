@@ -360,6 +360,7 @@ func (e *DbHelper) genInfo(in interface{}) (table string, pk string, pkv reflect
 				pkv = field
 			}
 		}
+		
 		fields = append(fields, fieldName)
 		//todo 这里先注释，因为更新时即使是空的，就是要更新成空的，如何解决
 		//if elemHaveValue(field) {

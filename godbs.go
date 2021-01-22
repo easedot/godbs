@@ -347,9 +347,10 @@ func (e *DbHelper) genInfo(in interface{}) (table string, pk string, pkv reflect
 				continue
 			}
 			if strings.ToLower(tag) == "r" {
-				continue
+				fieldName = toSnake(fieldType.Name)
+			}else{
+				fieldName = tag
 			}
-			fieldName = tag
 		} else {
 			fieldName = toSnake(fieldType.Name)
 		}
@@ -392,7 +393,7 @@ func (e *DbHelper) genUpdateInfo(in interface{}) (table string, pk string, pkv r
 				continue
 			}
 			if strings.ToLower(tag) == "r" {
-				fieldName = toSnake(fieldType.Name)
+				continue
 			}
 			fieldName = tag
 		} else {

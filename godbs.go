@@ -388,6 +388,9 @@ func (e *DbHelper) genUpdateInfo(in interface{}) (table string, pk string, pkv r
 			if tag == "-" {
 				continue
 			}
+			if tag == "r" {
+				continue
+			}
 			fieldName = tag
 		} else {
 			fieldName = toSnake(fieldType.Name)

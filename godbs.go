@@ -74,7 +74,14 @@ func (e *DbHelper) Find(m interface{}) (err error) {
 	err=e.conn.QueryRow(q).Scan(valuesPtr...)
 	return
 }
-
+func (e *DbHelper) Info(m interface{}) (table string, fields []string, values map[string]string,where[]string) {
+	t, _, _, f, v := e.genInfo(m)
+	var query []string
+	for k, v := range values {
+		query = append(query, fmt.Sprintf("%s=%v", k, v))
+	}
+	return t,f,v,query
+}
 func (e *DbHelper) Query(m interface{}, outSlice interface{}) (err error) {
 	valuePtr := reflect.ValueOf(outSlice)
 	value := valuePtr.Elem()

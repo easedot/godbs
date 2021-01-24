@@ -136,7 +136,13 @@ func (e *DbHelper) Create(m interface{}) (err error) {
 		log.Println(q)
 	}
 	result, err := e.conn.Exec(q)
-	newId, _ := result.LastInsertId()
+	if err!=nil{
+		return err
+	}
+	newId, err := result.LastInsertId()
+	if err!=nil{
+		return err
+	}
 	idv.SetInt(newId)
 	return
 }

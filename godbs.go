@@ -62,6 +62,10 @@ func (e *DbHelper) WithTrans(block TransFunc) error {
 	return err
 }
 
+func (e *DbHelper) Conn() (db *sql.DB) {
+	return e.db
+}
+
 func (e *DbHelper) Find(m interface{}) (err error) {
 	table, id, idv, fields, _ := e.genInfo(m)
 	q := fmt.Sprintf("SELECT %s FROM %s WHERE %s=%v ", strings.Join(fields, ","), table, id, idv)
